@@ -1,0 +1,63 @@
+diff --git a/src/iperf_api.c b/src/iperf_api.c
+index 939c2ca..ae272d3 100644
+--- a/src/iperf_api.c
++++ b/src/iperf_api.c
+@@ -4940,7 +4940,11 @@ iperf_free_stream(struct iperf_stream *sp)
+     struct iperf_interval_results *irp, *nirp;
+ 
+     /* XXX: need to free interval list too! */
++#ifdef IPERF_NO_MMAP
++    free(sp->buffer);
++#else
+     munmap(sp->buffer, sp->test->settings->blksize);
++#endif
+     if (sp->buffer_fd >= 0) {
+         close(sp->buffer_fd);
+         sp->buffer_fd = -1;
+@@ -5008,6 +5012,24 @@ iperf_new_stream(struct iperf_test *test, int s, int sender)
+     TAILQ_INIT(&sp->result->interval_results);
+ 
+     /* Create and randomize the buffer */
++#ifdef IPERF_NO_MMAP
++    /* no mmap(): the buffer is plain memory and there is no file behind it
++       (zerocopy, which sends from that file, is never offered here) */
++    (void)template;
++    sp->buffer_fd = -1;
++    size = test->settings->blksize;
++    if (test->protocol->id == Pudp && test->settings->gso && (size < test->settings->gso_bf_size))
++        size = test->settings->gso_bf_size;
++    if (test->protocol->id == Pudp && test->settings->gro && (size < test->settings->gro_bf_size))
++        size = test->settings->gro_bf_size;
++    if (sp->test->debug)
++        printf("Buffer %d bytes\n", size);
++    sp->buffer = (char *) calloc(1, size);
++    if (sp->buffer == NULL) {
++        i_errno = IECREATESTREAM;
++        goto err_exit_free_result;
++    }
++#else
+     sp->buffer_fd = mkstemp(template);
+     if (sp->buffer_fd == -1) {
+         i_errno = IECREATESTREAM;
+@@ -5033,6 +5055,7 @@ iperf_new_stream(struct iperf_test *test, int s, int sender)
+         i_errno = IECREATESTREAM;
+         goto err_exit_close_buffer;
+     }
++#endif
+     sp->pending_size = 0;
+ 
+     /* Set socket */
+@@ -5073,9 +5096,13 @@ err_exit_close_diskfile:
+         close(sp->diskfile_fd);
+     }
+ err_exit_munmap_buffer:
++#ifdef IPERF_NO_MMAP
++    free(sp->buffer);
++#else
+     munmap(sp->buffer, sp->test->settings->blksize);
+ err_exit_close_buffer:
+     close(sp->buffer_fd);
++#endif
+ err_exit_free_result:
+     free(sp->result);
+ err_exit_free_sp:
