@@ -1,0 +1,9 @@
+# What this port builds on: fetched at build time, never shipped.
+# iperf 3.22 (BSD 3-clause, ESnet / LBNL), tag 3.22
+IPERF_GIT=https://github.com/esnet/iperf.git
+IPERF_COMMIT=926bd905501b792bd082d2200d1d1a84aa543e3a
+IPERF_VERSION=3.22
+# Our own pieces, fetched at these commits
+# fpuauto (common/fpuauto): the FPU when there is one
+FPA_REPO=${FPA_REPO:-https://github.com/DalsinAI/amicradle-guest}
+FPA_COMMIT=4a784c84b878fe0e9abade7006e67e1ded9b165c

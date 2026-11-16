@@ -1,0 +1,26 @@
+diff --git a/src/iperf_util.c b/src/iperf_util.c
+index cce44fa..aa5a24d 100644
+--- a/src/iperf_util.c
++++ b/src/iperf_util.c
+@@ -55,6 +55,13 @@
+  * Errors are fatal.
+  * Returns 0 on success.
+  */
++#ifdef IPERF_AMIGA_ENTROPY
++/* no /dev/urandom on GFOS: amiga/gfiperf_compat.c */
++int readentropy(void *out, size_t outsize)
++{
++    return gfiperf_entropy(out, outsize);
++}
++#else
+ int readentropy(void *out, size_t outsize)
+ {
+     FILE *frandom;
+@@ -79,6 +86,7 @@ int readentropy(void *out, size_t outsize)
+     fclose(frandom);
+     return 0;
+ }
++#endif
+ 
+ 
+ /*

@@ -1,0 +1,49 @@
+diff --git a/src/iperf_client_api.c b/src/iperf_client_api.c
+index 54064c0..29a6f1c 100644
+--- a/src/iperf_client_api.c
++++ b/src/iperf_client_api.c
+@@ -40,6 +40,9 @@
+ 
+ #include "iperf.h"
+ #include "iperf_api.h"
++#ifdef IPERF_ONE_TASK
++#include "iperf_onetask.h"
++#endif
+ #include "iperf_util.h"
+ #include "iperf_locale.h"
+ #include "iperf_time.h"
+@@ -688,6 +691,8 @@ iperf_run_client(struct iperf_test * test)
+                     (test->state == TEST_RUNNING && !test->reverse) ? &write_set : NULL,
+                     NULL,
+                     timeout);
++#elif defined(IPERF_ONE_TASK)
++	result = iperf_onetask_select(test, test->max_fd + 1, &read_set, &write_set, NULL, timeout);
+ #else
+ 	result = select(test->max_fd + 1, &read_set, &write_set, NULL, timeout);
+ #endif // __vxworks or __VXWORKS__
+diff --git a/src/iperf_server_api.c b/src/iperf_server_api.c
+index 7994b5a..0e515a9 100644
+--- a/src/iperf_server_api.c
++++ b/src/iperf_server_api.c
+@@ -49,6 +49,9 @@
+ 
+ #include "iperf.h"
+ #include "iperf_api.h"
++#ifdef IPERF_ONE_TASK
++#include "iperf_onetask.h"
++#endif
+ #include "iperf_udp.h"
+ #include "iperf_tcp.h"
+ #include "iperf_util.h"
+@@ -687,7 +690,11 @@ iperf_run_server(struct iperf_test *test)
+             timeout = &used_timeout;
+         }
+ 
++#ifdef IPERF_ONE_TASK
++        result = iperf_onetask_select(test, test->max_fd + 1, &read_set, &write_set, NULL, timeout);
++#else
+         result = select(test->max_fd + 1, &read_set, &write_set, NULL, timeout);
++#endif
+         if (result < 0 && errno != EINTR) {
+             cleanup_server(test);
+             i_errno = IESELECT;
